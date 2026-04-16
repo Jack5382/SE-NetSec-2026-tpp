@@ -1,0 +1,79 @@
+@startuml
+!theme plain
+hide circle
+skinparam linetype ortho
+
+' 类样式与大小
+skinparam class {
+    BackgroundColor<<Bandit原生>> LightGray
+    ArrowColor Black
+    BorderColor Black
+    MinWidth 220
+    MinHeight 60
+}
+
+' 增加间距，让连接线更长
+skinparam nodesep 25  ' 横向间距增大
+skinparam ranksep 30  ' 纵向间距增大
+
+' 第一层：Bandit原生基类
+class BasePlugin <<Bandit原生>> {
+    + run(context: Context)
+    + add_issue(issue: Issue)
+}
+
+' 第二层：主插件入口
+class SensitiveInfoDetector {
+    - rule_manager: RuleManager
+    - ast_analyzer: ASTAnalyzer
+    - fp_filter: FalsePositiveFilter
+    + __init__()
+    + run(context: Context)
+    + _check_node(node: ast.AST)
+}
+
+' 第三层：核心模块1
+class RuleManager {
+    - builtin_rules: dict
+    - custom_rules: dict
+    + load_builtin_rules()
+    + load_custom_rules(config_path: str)
+    + get_all_rules() -> list
+}
+
+class ASTAnalyzer {
+    - tree: ast.AST
+    + parse_code(code: str)
+    + traverse_nodes(node: ast.AST) -> list
+    + extract_sensitive_candidates(node: ast.AST) -> list
+}
+
+' 第四层：核心模块2
+class FalsePositiveFilter {
+    - exclude_patterns: list
+    + is_comment(node: ast.AST) -> bool
+    + is_constant_definition(node: ast.AST) -> bool
+    + has_nosec_annotation(node: ast.AST) -> bool
+    + is_test_code(file_path: str) -> bool
+}
+
+' 第五层：报告模块
+class ReportGenerator {
+    - format: str
+    + __init__(format: str)
+    + generate(issues: list)
+}
+
+class Reporter <<Bandit原生>> {
+    + generate(issues: list)
+}
+
+' 类关系定义
+BasePlugin <|-- SensitiveInfoDetector : 继承
+SensitiveInfoDetector *-- RuleManager : 组合
+SensitiveInfoDetector *-- ASTAnalyzer : 组合
+SensitiveInfoDetector *-- FalsePositiveFilter : 组合
+SensitiveInfoDetector ..> ReportGenerator : 依赖
+Reporter <|-- ReportGenerator : 继承
+
+@enduml
